@@ -1,0 +1,69 @@
+{
+    "name": "gosuccess/vat-id-api",
+    "description": "A modern, strongly-typed, dependency-free PHP client to confirm EU VAT IDs through VIES and the German eVATR.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "vat",
+        "vat-id",
+        "ust-idnr",
+        "vies",
+        "evatr",
+        "bzst",
+        "eu",
+        "api",
+        "client"
+    ],
+    "homepage": "https://github.com/GoSuccessHQ/vat-id-api",
+    "readme": "README.md",
+    "authors": [
+        {
+            "name": "GoSuccess GmbH",
+            "homepage": "https://gosuccess.io"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/GoSuccessHQ/vat-id-api/issues",
+        "source": "https://github.com/GoSuccessHQ/vat-id-api"
+    },
+    "require": {
+        "php": "^8.4",
+        "ext-curl": "*",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "phpstan/phpstan": "^2.2",
+        "phpunit/phpunit": "^13.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "GoSuccess\\VatId\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "GoSuccess\\VatId\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --testsuite unit",
+        "test:integration": "phpunit --testsuite integration",
+        "stan": "phpstan analyse --memory-limit=2G",
+        "cs": "php-cs-fixer fix --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix",
+        "check": [
+            "@cs",
+            "@stan",
+            "@test"
+        ]
+    },
+    "config": {
+        "platform": {
+            "php": "8.4.1"
+        },
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
