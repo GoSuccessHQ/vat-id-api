@@ -32,7 +32,8 @@ foreach ($sources as $file => $url) {
         exit(1);
     }
 
-    $body = $response->body;
+    // Line endings as committed (.gitattributes: eol=lf); VIES serves CRLF.
+    $body = str_replace("\r\n", "\n", $response->body);
 
     if (str_ends_with($file, '.json')) {
         // Pretty and stable, so a diff shows what changed; the build stamp of eVATR's version is dropped.
