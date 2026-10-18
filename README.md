@@ -81,12 +81,12 @@ use GoSuccess\VatId\Bzst\Evatr;
 $evatr = new Evatr(VatId::parse('DE123456789'));
 
 $simple = $evatr->confirm(VatId::parse('ATU12345678'));
-$simple->isValid();   // true for evatr-0000 and evatr-2008
+$simple->isValid();   // true for evatr-0000, evatr-0003 and evatr-2008
 $simple->status;      // EvatrStatus, or the raw code if this package does not know it
 $simple->category();  // StatusCategory::Result, Notice, Error or Unknown
 $simple->httpStatus;  // as eVATR answered
-$simple->validFrom;   // ?DateTimeImmutable, for evatr-2002 and evatr-2006
-$simple->validUntil;
+$simple->validFrom;   // ?DateTimeImmutable, for evatr-2002 and evatr-2006 (a date: midnight UTC,
+$simple->validUntil;  // read it with format('Y-m-d'), not after a change of time zone)
 
 $qualified = $evatr->confirm(VatId::parse('ATU12345678'), new Company('Musterhaus GmbH & Co KG', 'musterort', 'Musterstrasse 22', '12345'));
 $qualified->name;     // Comparison::Matches (A), DoesNotMatch (B), NotRequested (C), NotProvided (D)
@@ -94,7 +94,8 @@ $qualified->city;
 ```
 
 A confirmation is qualified when the company is given (name and city are
-required, street and postal code optional). `EvatrStatus` knows the 26 codes the
+required, street and postal code optional; a blank detail is refused before the
+request, since eVATR would answer `evatr-0003`). `EvatrStatus` knows the 26 codes the
 BZSt published on 2026-10-18, each with `category()`, `message()` (German),
 `field()` and `httpStatus()`; `statusMessages()` and `memberStates()` read the
 info endpoints live.
@@ -108,7 +109,8 @@ requested number is `evatr-0005` (syntactically wrong).
 ## Requester
 
 Both clients take the requester as a default and accept another one per call
-(`requester:`). It is never written to exception messages or debug output.
+(`requester:`). It is never written to exception messages, debug output or the
+arguments of stack traces (`#[SensitiveParameter]`), which error trackers collect.
 
 ## Error handling
 
@@ -119,7 +121,7 @@ Every exception implements `GoSuccess\VatId\Exception\VatIdException`.
 | `ViesException` | VIES could not run the check (`actionSucceed: false`) |
 | `ApiException` and its subclasses | an error response without a readable answer (e.g. a proxy's HTML page) |
 | `TransportException` | network failure after the retries |
-| `SerializationException` | a successful answer cannot be read; the message names the field path |
+| `SerializationException` | an answer cannot be read (also an eVATR answer with a status whose other fields are malformed), or the request cannot be encoded (e.g. invalid UTF-8 in a company name); the message names the field path |
 | `InvalidArgumentException` | a malformed VAT ID, or eVATR without a German requester |
 
 Network failures and server errors (5xx) are retried with backoff (both services
@@ -129,6 +131,12 @@ only read); eVATR's 5xx answers with a status are returned after the retries.
 
 `ClientOptions` sets timeouts (30 s), retries (2), backoff and user agent. A
 custom transport implements `GoSuccess\VatId\Http\HttpClient`.
+
+## Specification drift
+
+`resources/specs` holds snapshots of both specifications and of eVATR's status
+messages; `composer specs` refreshes them. A weekly workflow fails when one
+changed, so `EvatrStatus` and the clients follow the services.
 
 ## Not covered
 

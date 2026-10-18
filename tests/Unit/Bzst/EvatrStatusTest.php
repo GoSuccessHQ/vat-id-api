@@ -14,7 +14,7 @@ final class EvatrStatusTest extends TestCase
 {
     public function testSnapshotMatchesTheEnum(): void
     {
-        $snapshot = json_decode((string) file_get_contents(\dirname(__DIR__, 2) . '/Fixtures/bzst/statusmeldungen.json'), true, 512, \JSON_THROW_ON_ERROR);
+        $snapshot = json_decode((string) file_get_contents(\dirname(__DIR__, 3) . '/resources/specs/evatr-statusmeldungen.json'), true, 512, \JSON_THROW_ON_ERROR);
         self::assertIsArray($snapshot);
         $categories = ['Ergebnis' => StatusCategory::Result, 'Hinweis' => StatusCategory::Notice, 'Fehler' => StatusCategory::Error];
 

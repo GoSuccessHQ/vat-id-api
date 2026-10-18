@@ -8,6 +8,7 @@ use GoSuccess\VatId\ClientOptions;
 use GoSuccess\VatId\Exception\ApiException;
 use GoSuccess\VatId\Exception\SerializationException;
 use GoSuccess\VatId\Exception\ServerException;
+use GoSuccess\VatId\Exception\TransportException;
 use GoSuccess\VatId\Exception\ViesException;
 use GoSuccess\VatId\Http\Response;
 use GoSuccess\VatId\Tests\Support\MockHttpClient;
@@ -16,6 +17,7 @@ use GoSuccess\VatId\Vies\Availability;
 use GoSuccess\VatId\Vies\Trader;
 use GoSuccess\VatId\Vies\TraderMatch;
 use GoSuccess\VatId\Vies\Vies;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversNamespace;
 use PHPUnit\Framework\TestCase;
 use Throwable;
@@ -156,6 +158,52 @@ final class ViesTest extends TestCase
             self::assertStringNotContainsString('999888777', $exception->getMessage());
             self::assertStringNotContainsString('999888777', $exception->getTraceAsString());
         }
+    }
+
+    public function testRequesterIsNotInTraceArguments(): void
+    {
+        // PHP's default (and php.ini-development) keeps call arguments in traces; error trackers collect them.
+        $ignoreArgs = ini_set('zend.exception_ignore_args', '0');
+        $http = new MockHttpClient();
+        // Thrown during the call, so its trace holds the client's frames.
+        $http->onSend = static function (): never {
+            throw new TransportException('down');
+        };
+        $client = $this->client($http);
+
+        try {
+            $client->check(VatId::parse('ATU12345678'), requester: VatId::parse('DE111222333'));
+            self::fail('No exception.');
+        } catch (TransportException $exception) {
+            $ownFrames = array_filter($exception->getTrace(), static fn(array $frame): bool => str_starts_with($frame['class'] ?? '', 'GoSuccess\\VatId\\') && !str_contains($frame['class'] ?? '', '\\Tests\\'));
+            $arguments = print_r(array_column($ownFrames, 'args'), true);
+            self::assertStringContainsString('U12345678', $arguments);
+            self::assertStringNotContainsString('999888777', $arguments);
+            self::assertStringNotContainsString('111222333', $arguments);
+        } finally {
+            ini_set('zend.exception_ignore_args', (string) $ignoreArgs);
+        }
+    }
+
+    public function testBlankTraderDetailsAreRefused(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new Trader(name: '  ');
+    }
+
+    public function testUnknownMatchAndAvailabilityValuesDoNotBreakTheAnswer(): void
+    {
+        $check = json_decode(self::fixture('check-valid'), true);
+        self::assertIsArray($check);
+        $check['traderNameMatch'] = 'PARTIAL';
+        $client = $this->client(new MockHttpClient(
+            new Response(200, (string) json_encode($check)),
+            new Response(200, '{"vow":{"available":true},"countries":[{"countryCode":"AT","availability":"Maintenance"}]}'),
+        ));
+
+        self::assertSame(TraderMatch::NotProcessed, $client->check(VatId::parse('ATU12345678'))->nameMatch);
+        self::assertSame(Availability::Unavailable, $client->status()->countries[0]->availability);
     }
 
     public function testTestServiceUsesItsPath(): void

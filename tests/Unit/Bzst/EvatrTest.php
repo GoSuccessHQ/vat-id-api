@@ -11,6 +11,8 @@ use GoSuccess\VatId\Bzst\EvatrStatus;
 use GoSuccess\VatId\Bzst\StatusCategory;
 use GoSuccess\VatId\ClientOptions;
 use GoSuccess\VatId\Exception\SerializationException;
+use GoSuccess\VatId\Exception\ServerException;
+use GoSuccess\VatId\Exception\TransportException;
 use GoSuccess\VatId\Http\Response;
 use GoSuccess\VatId\Tests\Support\MockHttpClient;
 use GoSuccess\VatId\VatId;
@@ -149,7 +151,7 @@ final class EvatrTest extends TestCase
     {
         $confirmation = $this->client(new MockHttpClient(new Response(200, self::fixture('valid-qualified'))))->confirm(VatId::parse('ATU12345678'));
 
-        self::assertSame('2026-10-18T17:19:05.064073+02:00', $confirmation->requestedAt->format('Y-m-d\TH:i:s.uP'));
+        self::assertSame('2026-10-18T17:19:05.064073+02:00', $confirmation->requestedAt?->format('Y-m-d\TH:i:s.uP'));
     }
 
     public function testValidFromAndUntil(): void
@@ -176,10 +178,84 @@ final class EvatrTest extends TestCase
         }
     }
 
+    public function testRequesterIsNotInTraceArguments(): void
+    {
+        // PHP's default (and php.ini-development) keeps call arguments in traces; error trackers collect them.
+        $ignoreArgs = ini_set('zend.exception_ignore_args', '0');
+        $http = new MockHttpClient();
+        // Thrown during the call, so its trace holds the client's frames.
+        $http->onSend = static function (): never {
+            throw new TransportException('down');
+        };
+        $client = $this->client($http);
+
+        try {
+            $client->confirm(VatId::parse('ATU12345678'));
+            self::fail('No exception.');
+        } catch (TransportException $exception) {
+            $ownFrames = array_filter($exception->getTrace(), static fn(array $frame): bool => str_starts_with($frame['class'] ?? '', 'GoSuccess\\VatId\\') && !str_contains($frame['class'] ?? '', '\\Tests\\'));
+            $arguments = print_r(array_column($ownFrames, 'args'), true);
+            self::assertStringContainsString('U12345678', $arguments);
+            self::assertStringNotContainsString('999888777', $arguments);
+        } finally {
+            ini_set('zend.exception_ignore_args', (string) $ignoreArgs);
+        }
+    }
+
+    public function testValidButIncompleteQualifiedRequestCountsAsValid(): void
+    {
+        $confirmation = $this->client(new MockHttpClient(new Response(400, '{"id":"5","anfrageZeitpunkt":"2026-10-18T17:19:05+02:00","status":"evatr-0003"}')))->confirm(VatId::parse('ATU12345678'));
+
+        self::assertSame(EvatrStatus::Code0003, $confirmation->status);
+        self::assertTrue($confirmation->isValid());
+    }
+
+    public function testBlankCompanyNameOrCityIsRefused(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new Company('', ' ');
+    }
+
+    public function testAnErrorStatusWithoutTimestampIsStillAResult(): void
+    {
+        $confirmation = $this->client(new MockHttpClient(new Response(403, '{"status":"evatr-0007"}')))->confirm(VatId::parse('ATU12345678'));
+
+        self::assertSame(EvatrStatus::Code0007, $confirmation->status);
+        self::assertNull($confirmation->requestedAt);
+        self::assertSame(403, $confirmation->httpStatus);
+    }
+
+    public function testAStatusOfAnotherServiceIsNoEvatrAnswer(): void
+    {
+        $http = new MockHttpClient(new Response(502, '{"status":"error","message":"upstream"}'), new Response(502, '{"status":"error"}'), new Response(502, '{"status":"error"}'));
+
+        $this->expectException(ServerException::class);
+
+        $this->client($http)->confirm(VatId::parse('ATU12345678'));
+    }
+
+    public function testUnknownComparisonLetterIsNull(): void
+    {
+        $confirmation = $this->client(new MockHttpClient(new Response(200, '{"anfrageZeitpunkt":"2026-10-18T17:19:05+02:00","status":"evatr-0000","ergFirmenname":"","ergOrt":"E"}')))->confirm(VatId::parse('ATU12345678'));
+
+        self::assertTrue($confirmation->isValid());
+        self::assertNull($confirmation->name);
+        self::assertNull($confirmation->city);
+    }
+
+    public function testListErrorsNameTheEndpoint(): void
+    {
+        $this->expectException(SerializationException::class);
+        $this->expectExceptionMessage('statusmeldungen[0].meldung');
+
+        $this->client(new MockHttpClient(new Response(200, '[{"status":"evatr-0000","kategorie":"Ergebnis","httpcode":200}]')))->statusMessages();
+    }
+
     public function testReadsStatusMessagesAndMemberStates(): void
     {
         $http = new MockHttpClient(
-            new Response(200, (string) file_get_contents(\dirname(__DIR__, 2) . '/Fixtures/bzst/statusmeldungen.json')),
+            new Response(200, (string) file_get_contents(\dirname(__DIR__, 3) . '/resources/specs/evatr-statusmeldungen.json')),
             new Response(200, '[{"alpha2":"AT","name":"Österreich","verfuegbar":true},{"alpha2":"DE","name":"Deutschland","verfuegbar":false}]'),
         );
         $client = $this->client($http);

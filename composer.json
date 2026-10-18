@@ -56,7 +56,8 @@
             "@cs",
             "@stan",
             "@test"
-        ]
+        ],
+        "specs": "php tools/fetch-specs.php"
     },
     "config": {
         "platform": {

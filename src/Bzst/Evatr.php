@@ -15,6 +15,7 @@ use GoSuccess\VatId\Http\Response;
 use GoSuccess\VatId\Support\Fields;
 use GoSuccess\VatId\VatId;
 use InvalidArgumentException;
+use SensitiveParameter;
 
 /**
  * Client for eVATR, the confirmation of foreign EU VAT IDs by the German
@@ -31,6 +32,7 @@ final class Evatr
      * @param VatId|null $requester The German VAT ID used for every request unless a call names another.
      */
     public function __construct(
+        #[SensitiveParameter]
         private readonly ?VatId $requester = null,
         ClientOptions $options = new ClientOptions(),
         ?HttpClient $httpClient = null,
@@ -49,7 +51,7 @@ final class Evatr
      * @throws TransportException       when the request keeps failing
      * @throws SerializationException   when the answer cannot be read
      */
-    public function confirm(VatId $requested, ?Company $company = null, ?VatId $requester = null): Confirmation
+    public function confirm(VatId $requested, ?Company $company = null, #[SensitiveParameter] ?VatId $requester = null): Confirmation
     {
         $requester ??= $this->requester;
 
@@ -60,7 +62,8 @@ final class Evatr
         $response = $this->connection->post('/v1/abfrage', ['anfragendeUstid' => (string) $requester, 'angefragteUstid' => (string) $requested] + ($company?->toArray() ?? []));
         $decoded = $response->body === '' ? null : json_decode($response->body, true);
 
-        if (\is_array($decoded) && \is_string($decoded['status'] ?? null)) {
+        // Only an eVATR status makes an answer; a proxy's {"status": "error"} is an error response.
+        if (\is_array($decoded) && \is_string($decoded['status'] ?? null) && str_starts_with($decoded['status'], 'evatr-')) {
             return Confirmation::fromFields(Fields::of($decoded, 'eVATR answer'), $response->statusCode);
         }
 
@@ -80,7 +83,7 @@ final class Evatr
      */
     public function statusMessages(): array
     {
-        return array_map(StatusMessage::fromFields(...), $this->list($this->connection->get('/v1/info/statusmeldungen'), 'status messages'));
+        return array_map(StatusMessage::fromFields(...), $this->list($this->connection->get('/v1/info/statusmeldungen'), 'statusmeldungen'));
     }
 
     /**
@@ -92,7 +95,7 @@ final class Evatr
      */
     public function memberStates(): array
     {
-        return array_map(MemberState::fromFields(...), $this->list($this->connection->get('/v1/info/eu_mitgliedstaaten'), 'member states'));
+        return array_map(MemberState::fromFields(...), $this->list($this->connection->get('/v1/info/eu_mitgliedstaaten'), 'eu_mitgliedstaaten'));
     }
 
     /**
@@ -115,9 +118,9 @@ final class Evatr
         $decoded = Connection::json($response);
 
         if (!\is_array($decoded) || !array_is_list($decoded)) {
-            throw new SerializationException("The eVATR {$what} are not a JSON list.");
+            throw new SerializationException("The eVATR answer of {$what} is not a JSON list.");
         }
 
-        return new Fields(['items' => $decoded])->objectList('items');
+        return new Fields([$what => $decoded])->objectList($what);
     }
 }

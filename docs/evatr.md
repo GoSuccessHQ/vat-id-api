@@ -30,10 +30,17 @@ is kept. `gueltigAb` and `gueltigBis` are read as dates.
 
 `EvatrStatus` holds the 26 codes of `GET /v1/info/statusmeldungen` as of
 2026-10-18 with category (`Ergebnis` → `Result`, `Hinweis` → `Notice`, `Fehler` →
-`Error`), HTTP status, field and the German message. The live test compares them
-with the endpoint and fails when the BZSt changes them. An unknown code arrives as
-its raw string with category `Unknown`. `isValid()` is true for `evatr-0000` and
-`evatr-2008`.
+`Error`), HTTP status, field and the German message. The snapshot
+`resources/specs/evatr-statusmeldungen.json` pins them in the unit tests; the
+weekly spec-drift workflow and the live test fail when the BZSt changes them. An
+unknown code arrives as its raw string with category `Unknown`. `isValid()` is
+true for `evatr-0000`, `evatr-0003` (valid, but a field of the qualified request
+was missing) and `evatr-2008`.
+
+Only a status starting with `evatr-` makes an answer; another JSON with a
+`status` (a proxy's `{"status": "error"}`) is an error response. An error answer
+without `anfrageZeitpunkt` has `requestedAt` null. A comparison letter this
+package does not know is null, so one odd field never hides a valid result.
 
 ## Comparisons
 

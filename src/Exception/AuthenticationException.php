@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GoSuccess\VatId\Exception;
 
 /**
- * The API key is missing or invalid (HTTP 401).
+ * The service refused the request as unauthenticated (HTTP 401); neither VIES
+ * nor eVATR needs credentials, so a proxy in between is the likely cause.
  */
 final class AuthenticationException extends ApiException {}

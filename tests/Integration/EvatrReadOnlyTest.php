@@ -61,8 +61,8 @@ final class EvatrReadOnlyTest extends TestCase
 
     public function testStatusTextsMatchTheEnum(): void
     {
-        $live = array_map(static fn(StatusMessage $message): array => [$message->status, $message->message], new Evatr()->statusMessages());
-        $shipped = array_map(static fn(EvatrStatus $status): array => [$status->value, $status->message()], EvatrStatus::cases());
+        $live = array_map(static fn(StatusMessage $message): array => [$message->status, $message->category, $message->httpStatus, $message->field, $message->message], new Evatr()->statusMessages());
+        $shipped = array_map(static fn(EvatrStatus $status): array => [$status->value, $status->category(), $status->httpStatus(), $status->field(), $status->message()], EvatrStatus::cases());
 
         self::assertSame($shipped, $live, 'eVATR changed its status messages; update EvatrStatus and the fixture.');
     }

@@ -116,6 +116,24 @@ final readonly class Fields
         return $value === null ? null : ($enum::tryFrom($value) ?? throw $this->invalid($key, 'one of the known values'));
     }
 
+    /**
+     * Like {@see nullableEnum()}, but a value this package does not know (also
+     * an empty one) is null instead of an error: for secondary fields whose
+     * unknown value must not make the whole answer unreadable.
+     *
+     * @template T of BackedEnum
+     *
+     * @param class-string<T> $enum
+     *
+     * @return T|null
+     */
+    public function tolerantEnum(string $key, string $enum): ?BackedEnum
+    {
+        $value = $this->nullableString($key);
+
+        return $value === null ? null : $enum::tryFrom($value);
+    }
+
     public function date(string $key): DateTimeImmutable
     {
         return $this->nullableDate($key) ?? throw $this->invalid($key, 'a date');
@@ -123,7 +141,8 @@ final readonly class Fields
 
     /**
      * An ISO 8601 date or date-time; fractions beyond microseconds (eVATR sends
-     * nanoseconds) are cut, the offset is kept. A date without time is midnight UTC.
+     * nanoseconds) are cut, the offset is kept. A date without time is midnight UTC;
+     * read it with `format('Y-m-d')`, not after a change of time zone.
      */
     public function nullableDate(string $key): ?DateTimeImmutable
     {

@@ -9,8 +9,8 @@ use InvalidArgumentException;
 /**
  * Immutable transport and retry settings.
  *
- * Credentials are not part of the options: the client receives the API key
- * separately, so options can be shared and logged safely.
+ * The requester is not part of the options: the clients receive it separately,
+ * so options can be shared and logged safely.
  */
 final readonly class ClientOptions
 {

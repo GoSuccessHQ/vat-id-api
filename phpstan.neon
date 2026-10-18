@@ -8,4 +8,5 @@ parameters:
         - src
         - tests
         - examples
+        - tools
     treatPhpDocTypesAsCertain: false

@@ -15,6 +15,7 @@ use GoSuccess\VatId\Http\HttpClient;
 use GoSuccess\VatId\Http\Response;
 use GoSuccess\VatId\Support\Fields;
 use GoSuccess\VatId\VatId;
+use SensitiveParameter;
 
 /**
  * Client for VIES on-the-Web of the European Commission (REST).
@@ -33,6 +34,7 @@ final class Vies
      * @param VatId|null $requester The requester sent with every check unless a call names another.
      */
     public function __construct(
+        #[SensitiveParameter]
         private readonly ?VatId $requester = null,
         ClientOptions $options = new ClientOptions(),
         ?HttpClient $httpClient = null,
@@ -49,7 +51,7 @@ final class Vies
      * @throws TransportException     when the request keeps failing
      * @throws SerializationException when the answer cannot be read
      */
-    public function check(VatId $vatId, ?Trader $trader = null, ?VatId $requester = null): ViesCheck
+    public function check(VatId $vatId, ?Trader $trader = null, #[SensitiveParameter] ?VatId $requester = null): ViesCheck
     {
         return $this->checkAt('/check-vat-number', $vatId, $trader, $requester);
     }
@@ -59,7 +61,7 @@ final class Vies
      *
      * @throws ViesException|ApiException|TransportException|SerializationException
      */
-    public function checkTestService(VatId $vatId, ?Trader $trader = null, ?VatId $requester = null): ViesCheck
+    public function checkTestService(VatId $vatId, ?Trader $trader = null, #[SensitiveParameter] ?VatId $requester = null): ViesCheck
     {
         return $this->checkAt('/check-vat-test-service', $vatId, $trader, $requester);
     }
@@ -82,7 +84,7 @@ final class Vies
         return ['requester' => $this->requester === null ? 'none' : '***'];
     }
 
-    private function checkAt(string $path, VatId $vatId, ?Trader $trader, ?VatId $requester): ViesCheck
+    private function checkAt(string $path, VatId $vatId, ?Trader $trader, #[SensitiveParameter] ?VatId $requester): ViesCheck
     {
         $requester ??= $this->requester;
         $body = ['countryCode' => $vatId->countryCode, 'vatNumber' => $vatId->number];

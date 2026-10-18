@@ -41,7 +41,7 @@ final readonly class ViesCheck
     {
         $value = static fn(string $key): ?string => self::known($fields->nullableString($key));
         $trader = new Trader($value('traderName'), $value('traderStreet'), $value('traderPostalCode'), $value('traderCity'), $value('traderCompanyType'));
-        $match = static fn(string $key): TraderMatch => $fields->nullableEnum($key, TraderMatch::class) ?? TraderMatch::NotProcessed;
+        $match = static fn(string $key): TraderMatch => $fields->tolerantEnum($key, TraderMatch::class) ?? TraderMatch::NotProcessed;
 
         return new self(
             countryCode: $fields->string('countryCode'),

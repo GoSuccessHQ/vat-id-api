@@ -30,7 +30,8 @@ final readonly class Request
     ) {}
 
     /**
-     * Hide the API key in the `Authorization` header from var_dump() and print_r().
+     * Hide the body, which carries the requester's VAT ID, and any `Authorization`
+     * header from var_dump() and print_r().
      *
      * @return array<string, mixed>
      */
@@ -48,7 +49,7 @@ final readonly class Request
             'method' => $this->method,
             'uri' => $this->uri,
             'headers' => $headers,
-            'body' => $this->body,
+            'body' => $this->body === null ? null : '********',
             'timeout' => $this->timeout,
             'connectTimeout' => $this->connectTimeout,
         ];

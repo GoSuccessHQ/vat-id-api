@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace GoSuccess\VatId\Exception;
 
 /**
- * The API key is valid but not allowed to perform the request, e.g. a read-only key
- * or a feature the plan does not include (HTTP 403).
+ * The request was refused (HTTP 403) without an answer of the service, e.g. by a
+ * firewall in between; eVATR's own refusals (evatr-0006, -0007, -0008) come back
+ * as a confirmation.
  */
 final class ForbiddenException extends ApiException {}

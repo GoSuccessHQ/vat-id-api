@@ -9,6 +9,7 @@ use GoSuccess\VatId\Exception\ApiException;
 use GoSuccess\VatId\Exception\SerializationException;
 use GoSuccess\VatId\Exception\TransportException;
 use JsonException;
+use SensitiveParameter;
 
 /**
  * JSON requests to one service with retries.
@@ -38,7 +39,7 @@ final class Connection
     /**
      * @param array<string, mixed> $body
      */
-    public function post(string $path, array $body): Response
+    public function post(string $path, #[SensitiveParameter] array $body): Response
     {
         try {
             $json = json_encode($body, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES);
@@ -78,7 +79,7 @@ final class Connection
             : ApiException::fromResponse($response, $this->lastRequest);
     }
 
-    private function send(Method $method, string $path, ?string $body): Response
+    private function send(Method $method, string $path, #[SensitiveParameter] ?string $body): Response
     {
         $headers = ['Accept' => 'application/json', 'User-Agent' => $this->options->userAgent];
 

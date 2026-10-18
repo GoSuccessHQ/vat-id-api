@@ -57,7 +57,11 @@ final readonly class VatId implements Stringable
      */
     public static function parse(string $value): self
     {
-        $compact = (string) preg_replace('/[\s.\-]+/u', '', $value);
+        $compact = preg_replace('/[\s.\-]+/u', '', $value);
+
+        if ($compact === null) {
+            throw new InvalidArgumentException('The VAT ID is not valid UTF-8.');
+        }
 
         return new self(substr($compact, 0, 2), substr($compact, 2));
     }

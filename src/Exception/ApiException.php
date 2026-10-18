@@ -38,9 +38,10 @@ class ApiException extends RuntimeException implements VatIdException
     /**
      * Build the most specific exception type for an error response.
      *
-     * @param Request    $request The request that failed. It carries the API key, so
-     *                            it is marked sensitive: the exception is created in
-     *                            this frame, and its trace must not hold the key.
+     * @param Request    $request The request that failed. Its body may carry the
+     *                            requester's VAT ID, so it is marked sensitive: the
+     *                            exception is created in this frame, and its trace
+     *                            must not hold it.
      * @param float|null $now     Current Unix time, to turn a `Retry-After` date into
      *                            {@see RateLimitException::$retryAfter}; defaults to the
      *                            system time.

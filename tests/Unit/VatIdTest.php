@@ -34,6 +34,7 @@ final class VatIdTest extends TestCase
         yield 'greece as GR' => ['GR123456789', 'EL', '123456789'];
         yield 'greece as EL' => ['EL123456789', 'EL', '123456789'];
         yield 'northern ireland' => ['XI123456789', 'XI', '123456789'];
+        yield 'non-breaking and thin spaces' => ["DE\u{00A0}123\u{202F}456\u{2009}789", 'DE', '123456789'];
         yield 'letters and symbols allowed' => ['NL123456789B01', 'NL', '123456789B01'];
     }
 
@@ -68,6 +69,14 @@ final class VatIdTest extends TestCase
         } catch (InvalidArgumentException $exception) {
             self::assertStringNotContainsString('987654321', $exception->getMessage());
         }
+    }
+
+    public function testInvalidUtf8IsNamedAsSuch(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('UTF-8');
+
+        VatId::parse("DE\xFF123456789");
     }
 
     public function testConstructsDirectlyWithTheSameRules(): void

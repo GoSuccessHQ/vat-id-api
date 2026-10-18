@@ -7,7 +7,8 @@ namespace GoSuccess\VatId\Vies;
 use GoSuccess\VatId\Support\Fields;
 
 /**
- * The availability of one member state's service.
+ * The availability of one member state's service; an availability this package
+ * does not know counts as unavailable.
  */
 final readonly class CountryAvailability
 {
@@ -21,6 +22,6 @@ final readonly class CountryAvailability
      */
     public static function fromFields(Fields $fields): self
     {
-        return new self($fields->string('countryCode'), $fields->nullableEnum('availability', Availability::class) ?? Availability::Unavailable);
+        return new self($fields->string('countryCode'), $fields->tolerantEnum('availability', Availability::class) ?? Availability::Unavailable);
     }
 }
