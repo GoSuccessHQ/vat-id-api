@@ -1,0 +1,19 @@
+{
+  "countryCode" : "AT",
+  "vatNumber" : "U12345678",
+  "requestDate" : "2026-10-18T15:19:05.160Z",
+  "valid" : true,
+  "requestIdentifier" : "WAPIAAAAZ1234567",
+  "name" : "MUSTERHAUS GMBH",
+  "address" : "MUSTERSTRASSE 22\n1234 MUSTERORT",
+  "traderName" : "Musterhaus GmbH",
+  "traderStreet" : "---",
+  "traderPostalCode" : "1234",
+  "traderCity" : "Musterort",
+  "traderCompanyType" : "---",
+  "traderNameMatch" : "VALID",
+  "traderStreetMatch" : "NOT_PROCESSED",
+  "traderPostalCodeMatch" : "VALID",
+  "traderCityMatch" : "INVALID",
+  "traderCompanyTypeMatch" : "NOT_PROCESSED"
+}

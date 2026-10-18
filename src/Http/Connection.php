@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GoSuccess\VatId\Http;
 
 use GoSuccess\VatId\ClientOptions;
+use GoSuccess\VatId\Exception\ApiException;
 use GoSuccess\VatId\Exception\SerializationException;
 use GoSuccess\VatId\Exception\TransportException;
 use JsonException;
@@ -19,14 +20,17 @@ use JsonException;
  *
  * @internal
  */
-final readonly class Connection
+final class Connection
 {
-    private string $baseUri;
+    private readonly string $baseUri;
+
+    /** The request behind the last response, for {@see failure()}. */
+    private ?Request $lastRequest = null;
 
     public function __construct(
         string $baseUri,
-        private ClientOptions $options,
-        private HttpClient $httpClient,
+        private readonly ClientOptions $options,
+        private readonly HttpClient $httpClient,
     ) {
         $this->baseUri = rtrim($baseUri, '/');
     }
@@ -64,6 +68,16 @@ final readonly class Connection
         }
     }
 
+    /**
+     * The exception for an error response of the last request.
+     */
+    public function failure(Response $response): ApiException
+    {
+        return $this->lastRequest === null
+            ? new ApiException("The request failed with HTTP {$response->statusCode}.", $response->statusCode, $response->body)
+            : ApiException::fromResponse($response, $this->lastRequest);
+    }
+
     private function send(Method $method, string $path, ?string $body): Response
     {
         $headers = ['Accept' => 'application/json', 'User-Agent' => $this->options->userAgent];
@@ -80,6 +94,8 @@ final readonly class Connection
             timeout: $this->options->timeout,
             connectTimeout: $this->options->connectTimeout,
         );
+
+        $this->lastRequest = $request;
 
         for ($attempt = 0; ; $attempt++) {
             try {

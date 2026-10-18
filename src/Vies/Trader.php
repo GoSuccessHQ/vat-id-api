@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace GoSuccess\VatId\Vies;
+
+/**
+ * Trader details to compare with the registered data (approximate matching),
+ * or the details VIES returns. Unset details are neither sent nor compared.
+ */
+final readonly class Trader
+{
+    public function __construct(
+        public ?string $name = null,
+        public ?string $street = null,
+        public ?string $postalCode = null,
+        public ?string $city = null,
+        public ?string $companyType = null,
+    ) {}
+
+    /**
+     * The request fields of the details that are set.
+     *
+     * @internal
+     *
+     * @return array<string, string>
+     */
+    public function toArray(): array
+    {
+        return array_filter([
+            'traderName' => $this->name,
+            'traderStreet' => $this->street,
+            'traderPostalCode' => $this->postalCode,
+            'traderCity' => $this->city,
+            'traderCompanyType' => $this->companyType,
+        ], static fn(?string $value): bool => $value !== null);
+    }
+
+    /**
+     * Whether no detail is set.
+     */
+    public function isEmpty(): bool
+    {
+        return $this->toArray() === [];
+    }
+}
