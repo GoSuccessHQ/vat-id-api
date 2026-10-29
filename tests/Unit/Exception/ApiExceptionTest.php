@@ -171,6 +171,24 @@ final class ApiExceptionTest extends TestCase
         yield 'nothing' => [[], null];
     }
 
+    #[DataProvider('errorStatuses')]
+    public function testEveryExceptionCarriesTheResponse(int $status): void
+    {
+        $response = new Response($status, 'body', ['retry-after' => '1']);
+
+        self::assertSame($response, ApiException::fromResponse($response, $this->request())->response);
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function errorStatuses(): iterable
+    {
+        foreach ([400, 401, 403, 404, 409, 418, 422, 429, 500] as $status) {
+            yield (string) $status => [$status];
+        }
+    }
+
     private function request(): Request
     {
         return new Request(Method::Post, 'https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number');

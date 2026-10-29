@@ -10,6 +10,7 @@ use GoSuccess\VatId\Bzst\Evatr;
 use GoSuccess\VatId\Bzst\EvatrStatus;
 use GoSuccess\VatId\Bzst\StatusCategory;
 use GoSuccess\VatId\ClientOptions;
+use GoSuccess\VatId\Exception\ForbiddenException;
 use GoSuccess\VatId\Exception\SerializationException;
 use GoSuccess\VatId\Exception\ServerException;
 use GoSuccess\VatId\Exception\TransportException;
@@ -18,6 +19,7 @@ use GoSuccess\VatId\Tests\Support\MockHttpClient;
 use GoSuccess\VatId\VatId;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversNamespace;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Throwable;
 
@@ -274,6 +276,100 @@ final class EvatrTest extends TestCase
         self::assertSame(['AT', 'DE'], array_map(static fn($state): string => $state->countryCode, $states));
         self::assertSame('Österreich', $states[0]->name);
         self::assertFalse($states[1]->available);
+    }
+
+    /**
+     * @return iterable<string, array{int, string}>
+     */
+    public static function answers(): iterable
+    {
+        yield 'valid, qualified' => [200, self::fixture('valid-qualified')];
+        yield 'not allocated' => [404, self::fixture('not-allocated')];
+        yield 'input error' => [400, self::fixture('input-error')];
+    }
+
+    #[DataProvider('answers')]
+    public function testConfirmationCarriesTheAnswerUnchanged(int $status, string $body): void
+    {
+        $response = new Response($status, $body, ['content-type' => 'application/json', 'date' => 'Thu, 29 Oct 2026 10:00:00 GMT']);
+
+        $confirmation = $this->client(new MockHttpClient($response))->confirm(VatId::parse('ATU12345678'));
+
+        self::assertSame($response, $confirmation->response);
+        self::assertSame($body, $confirmation->response->body);
+        self::assertSame($status, $confirmation->response->statusCode);
+        self::assertSame('application/json', $confirmation->response->header('Content-Type'));
+    }
+
+    public function testRetriedConfirmationCarriesTheLastAnswer(): void
+    {
+        $last = new Response(503, self::fixture('unavailable'));
+        $http = new MockHttpClient(new Response(503, self::fixture('unavailable')), new Response(503, self::fixture('unavailable')), $last);
+
+        self::assertSame($last, $this->client($http)->confirm(VatId::parse('ATU12345678'))->response);
+    }
+
+    public function testUnreadableAnswerCarriesTheResponse(): void
+    {
+        $response = new Response(200, '<html>maintenance</html>');
+
+        try {
+            $this->client(new MockHttpClient($response))->confirm(VatId::parse('ATU12345678'));
+            self::fail('No exception.');
+        } catch (SerializationException $exception) {
+            self::assertSame($response, $exception->response);
+        }
+    }
+
+    public function testMalformedFieldOfAnAnswerCarriesTheResponse(): void
+    {
+        $response = new Response(200, '{"anfrageZeitpunkt":"yesterday","status":"evatr-0000"}');
+
+        try {
+            $this->client(new MockHttpClient($response))->confirm(VatId::parse('ATU12345678'));
+            self::fail('No exception.');
+        } catch (SerializationException $exception) {
+            self::assertSame('Field anfrageZeitpunkt must be a date.', $exception->getMessage());
+            self::assertSame($response, $exception->response);
+        }
+    }
+
+    public function testErrorResponseCarriesTheResponse(): void
+    {
+        $response = new Response(403, '<html>Forbidden</html>', ['server' => 'proxy']);
+
+        try {
+            $this->client(new MockHttpClient($response))->confirm(VatId::parse('ATU12345678'));
+            self::fail('No exception.');
+        } catch (ForbiddenException $exception) {
+            self::assertSame($response, $exception->response);
+            self::assertSame('<html>Forbidden</html>', $exception->response->body);
+        }
+    }
+
+    public function testUnencodableRequestCarriesNoResponse(): void
+    {
+        $http = new MockHttpClient();
+
+        try {
+            $this->client($http)->confirm(VatId::parse('ATU12345678'), new Company("Muster\xFF", 'Wien'));
+            self::fail('No exception.');
+        } catch (SerializationException $exception) {
+            self::assertNull($exception->response);
+            self::assertSame(0, $http->callCount());
+        }
+    }
+
+    public function testMalformedListItemCarriesTheResponse(): void
+    {
+        $response = new Response(200, '[{"alpha2":"AT","name":"Österreich","verfuegbar":"yes"}]');
+
+        try {
+            $this->client(new MockHttpClient($response))->memberStates();
+            self::fail('No exception.');
+        } catch (SerializationException $exception) {
+            self::assertSame($response, $exception->response);
+        }
     }
 
     private function client(MockHttpClient $http): Evatr

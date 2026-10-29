@@ -94,7 +94,9 @@ final class Vies
             $body['requesterNumber'] = $requester->number;
         }
 
-        return ViesCheck::fromFields($this->read($this->connection->post($path, $body + ($trader?->toArray() ?? [])), 'check'));
+        $response = $this->connection->post($path, $body + ($trader?->toArray() ?? []));
+
+        return ViesCheck::fromFields($this->read($response, 'check'), $response);
     }
 
     /**
@@ -112,6 +114,6 @@ final class Vies
             throw $this->connection->failure($response);
         }
 
-        return Fields::of(Connection::json($response), "VIES {$what} answer");
+        return Fields::of(Connection::json($response), "VIES {$what} answer", $response);
     }
 }

@@ -9,10 +9,11 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Exception;
 use GoSuccess\VatId\Exception\SerializationException;
+use GoSuccess\VatId\Http\Response;
 
 /**
  * Typed access to a decoded JSON answer. A failure names the path of the
- * field, never its value.
+ * field, never its value, and carries the response the answer came from.
  *
  * @internal
  */
@@ -24,14 +25,15 @@ final readonly class Fields
     public function __construct(
         private array $data,
         private string $path = '',
+        private ?Response $response = null,
     ) {}
 
     /**
      * The fields of a decoded document, or a SerializationException when it is not an object.
      */
-    public static function of(mixed $decoded, string $what): self
+    public static function of(mixed $decoded, string $what, ?Response $response = null): self
     {
-        return \is_array($decoded) && !array_is_list($decoded) ? new self($decoded) : throw new SerializationException("The {$what} is not a JSON object.");
+        return \is_array($decoded) && !array_is_list($decoded) ? new self($decoded, '', $response) : throw new SerializationException("The {$what} is not a JSON object.", response: $response);
     }
 
     public function string(string $key): string
@@ -77,7 +79,7 @@ final readonly class Fields
             return null;
         }
 
-        return \is_array($value) ? new self($value, $this->field($key)) : throw $this->invalid($key, 'an object');
+        return \is_array($value) ? new self($value, $this->field($key), $this->response) : throw $this->invalid($key, 'an object');
     }
 
     /**
@@ -96,7 +98,7 @@ final readonly class Fields
         $items = [];
 
         foreach ($value as $index => $item) {
-            $items[] = \is_array($item) ? new self($item, $this->field("{$key}[{$index}]")) : throw $this->invalid("{$key}[{$index}]", 'an object');
+            $items[] = \is_array($item) ? new self($item, $this->field("{$key}[{$index}]"), $this->response) : throw $this->invalid("{$key}[{$index}]", 'an object');
         }
 
         return $items;
@@ -170,6 +172,6 @@ final readonly class Fields
 
     private function invalid(string $key, string $expected): SerializationException
     {
-        return new SerializationException("Field {$this->field($key)} must be {$expected}.");
+        return new SerializationException("Field {$this->field($key)} must be {$expected}.", response: $this->response);
     }
 }

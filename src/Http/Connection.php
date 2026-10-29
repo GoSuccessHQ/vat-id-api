@@ -65,7 +65,7 @@ final class Connection
         try {
             return json_decode($response->body, true, 512, \JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            throw new SerializationException("The response (HTTP {$response->statusCode}) is not JSON.");
+            throw new SerializationException("The response (HTTP {$response->statusCode}) is not JSON.", response: $response);
         }
     }
 
@@ -75,7 +75,7 @@ final class Connection
     public function failure(Response $response): ApiException
     {
         return $this->lastRequest === null
-            ? new ApiException("The request failed with HTTP {$response->statusCode}.", $response->statusCode, $response->body)
+            ? new ApiException("The request failed with HTTP {$response->statusCode}.", $response->statusCode, $response->body, response: $response)
             : ApiException::fromResponse($response, $this->lastRequest);
     }
 

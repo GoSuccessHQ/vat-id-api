@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GoSuccess\VatId\Bzst;
 
 use DateTimeImmutable;
+use GoSuccess\VatId\Http\Response;
 use GoSuccess\VatId\Support\Fields;
 
 /**
@@ -21,6 +22,8 @@ final readonly class Confirmation
      * @param DateTimeImmutable|null $requestedAt With the offset eVATR sent; null when an error answer lacks it.
      * @param Comparison|null   $name        Comparisons of a qualified confirmation; null for a simple one,
      *                                       when eVATR returned none, or for a letter this package does not know.
+     * @param Response          $response    eVATR's answer unchanged: status, headers and the body as
+     *                                       received, the record that proves the request.
      */
     public function __construct(
         public ?string $id,
@@ -33,12 +36,13 @@ final readonly class Confirmation
         public ?Comparison $street,
         public ?Comparison $postalCode,
         public ?Comparison $city,
+        public Response $response,
     ) {}
 
     /**
      * @internal
      */
-    public static function fromFields(Fields $fields, int $httpStatus): self
+    public static function fromFields(Fields $fields, Response $response): self
     {
         $code = $fields->string('status');
 
@@ -48,11 +52,12 @@ final readonly class Confirmation
             validFrom: $fields->nullableDate('gueltigAb'),
             validUntil: $fields->nullableDate('gueltigBis'),
             status: EvatrStatus::tryFrom($code) ?? $code,
-            httpStatus: $httpStatus,
+            httpStatus: $response->statusCode,
             name: $fields->tolerantEnum('ergFirmenname', Comparison::class),
             street: $fields->tolerantEnum('ergStrasse', Comparison::class),
             postalCode: $fields->tolerantEnum('ergPlz', Comparison::class),
             city: $fields->tolerantEnum('ergOrt', Comparison::class),
+            response: $response,
         );
     }
 

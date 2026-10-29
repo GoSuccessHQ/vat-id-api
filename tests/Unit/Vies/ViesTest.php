@@ -215,6 +215,41 @@ final class ViesTest extends TestCase
         self::assertSame('https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-test-service', $http->requests[0]->uri);
     }
 
+    public function testCheckCarriesTheAnswerUnchanged(): void
+    {
+        $response = new Response(200, self::fixture('check-valid'), ['content-type' => 'application/json']);
+
+        $check = $this->client(new MockHttpClient($response))->check(VatId::parse('ATU12345678'));
+
+        self::assertSame($response, $check->response);
+        self::assertSame(self::fixture('check-valid'), $check->response->body);
+    }
+
+    public function testViesExceptionCarriesTheResponse(): void
+    {
+        $response = new Response(200, '{"actionSucceed":false,"errorWrappers":[{"error":"MS_UNAVAILABLE"}]}');
+
+        try {
+            $this->client(new MockHttpClient($response))->check(VatId::parse('ATU12345678'));
+            self::fail('No exception.');
+        } catch (ViesException $exception) {
+            self::assertSame($response, $exception->response);
+        }
+    }
+
+    public function testUnreadableCheckCarriesTheResponse(): void
+    {
+        $response = new Response(200, '{"countryCode":"AT","vatNumber":"U12345678","requestDate":"2026-10-18T15:19:05.160Z","valid":"yes"}');
+
+        try {
+            $this->client(new MockHttpClient($response))->check(VatId::parse('ATU12345678'));
+            self::fail('No exception.');
+        } catch (SerializationException $exception) {
+            self::assertSame('Field valid must be a boolean.', $exception->getMessage());
+            self::assertSame($response, $exception->response);
+        }
+    }
+
     private function client(MockHttpClient $http): Vies
     {
         return new Vies(VatId::parse(self::REQUESTER), new ClientOptions(retryBaseDelay: 0.0), $http);

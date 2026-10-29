@@ -57,6 +57,7 @@ $check->valid;             // bool
 $check->name;              // ?string, null where VIES has none ("---")
 $check->address;           // ?string
 $check->requestIdentifier; // ?string, the consultation number (needs a requester)
+$check->response;          // Http\Response, VIES's answer unchanged
 
 // Compare trader details (approximate matching where the member state supports it):
 $check = $vies->check(VatId::parse('ATU12345678'), new Trader(name: 'Musterhaus GmbH', city: 'Wien'));
@@ -87,6 +88,7 @@ $simple->category();  // StatusCategory::Result, Notice, Error or Unknown
 $simple->httpStatus;  // as eVATR answered
 $simple->validFrom;   // ?DateTimeImmutable, for evatr-2002 and evatr-2006 (a date: midnight UTC,
 $simple->validUntil;  // read it with format('Y-m-d'), not after a change of time zone)
+$simple->response;    // Http\Response, eVATR's answer unchanged: statusCode, body, headers
 
 $qualified = $evatr->confirm(VatId::parse('ATU12345678'), new Company('Musterhaus GmbH & Co KG', 'musterort', 'Musterstrasse 22', '12345'));
 $qualified->name;     // Comparison::Matches (A), DoesNotMatch (B), NotRequested (C), NotProvided (D)
@@ -126,6 +128,30 @@ Every exception implements `GoSuccess\VatId\Exception\VatIdException`.
 
 Network failures and server errors (5xx) are retried with backoff (both services
 only read); eVATR's 5xx answers with a status are returned after the retries.
+
+## Proof of a check
+
+`Confirmation::$response` and `ViesCheck::$response` keep the answer as it
+arrived (`statusCode`, `body`, `headers`, `reasonPhrase`), e.g. to archive the
+record that proves a qualified confirmation. A failure after an answer arrived
+carries it as well: `ApiException::$response` (with its subclasses) and
+`SerializationException::$response`, which is null only when the request itself
+could not be encoded. The body is what the service sent once the transfer's
+content encoding is undone; header names are lower-cased. The answer holds
+nothing of the request, so not the requester.
+
+```php
+try {
+    $confirmation = $evatr->confirm($vatId, $company);
+    $archive->store($confirmation->response->statusCode, $confirmation->response->body);
+} catch (ApiException|SerializationException $exception) {
+    if ($exception->response !== null) {
+        $archive->store($exception->response->statusCode, $exception->response->body);
+    }
+
+    throw $exception;
+}
+```
 
 ## Configuration and custom transport
 

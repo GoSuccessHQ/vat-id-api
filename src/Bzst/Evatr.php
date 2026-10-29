@@ -64,14 +64,14 @@ final class Evatr
 
         // Only an eVATR status makes an answer; a proxy's {"status": "error"} is an error response.
         if (\is_array($decoded) && \is_string($decoded['status'] ?? null) && str_starts_with($decoded['status'], 'evatr-')) {
-            return Confirmation::fromFields(Fields::of($decoded, 'eVATR answer'), $response->statusCode);
+            return Confirmation::fromFields(Fields::of($decoded, 'eVATR answer', $response), $response);
         }
 
         if (!$response->isSuccessful) {
             throw $this->connection->failure($response);
         }
 
-        throw new SerializationException("The eVATR answer (HTTP {$response->statusCode}) carries no status.");
+        throw new SerializationException("The eVATR answer (HTTP {$response->statusCode}) carries no status.", response: $response);
     }
 
     /**
@@ -118,9 +118,9 @@ final class Evatr
         $decoded = Connection::json($response);
 
         if (!\is_array($decoded) || !array_is_list($decoded)) {
-            throw new SerializationException("The eVATR answer of {$what} is not a JSON list.");
+            throw new SerializationException("The eVATR answer of {$what} is not a JSON list.", response: $response);
         }
 
-        return new Fields([$what => $decoded])->objectList($what);
+        return new Fields([$what => $decoded], response: $response)->objectList($what);
     }
 }

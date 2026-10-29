@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GoSuccess\VatId\Vies;
 
 use DateTimeImmutable;
+use GoSuccess\VatId\Http\Response;
 use GoSuccess\VatId\Support\Fields;
 
 /**
@@ -17,6 +18,7 @@ final readonly class ViesCheck
      * @param string|null $requestIdentifier The consultation number that proves the check; only
      *                                       with a requester, and only if the member state issues one.
      * @param Trader|null $trader            The trader details VIES returned; null when it returned none.
+     * @param Response    $response          VIES's answer unchanged: status, headers and the body as received.
      */
     public function __construct(
         public string $countryCode,
@@ -32,12 +34,13 @@ final readonly class ViesCheck
         public TraderMatch $postalCodeMatch,
         public TraderMatch $cityMatch,
         public TraderMatch $companyTypeMatch,
+        public Response $response,
     ) {}
 
     /**
      * @internal
      */
-    public static function fromFields(Fields $fields): self
+    public static function fromFields(Fields $fields, Response $response): self
     {
         $value = static fn(string $key): ?string => self::known($fields->nullableString($key));
         $trader = new Trader($value('traderName'), $value('traderStreet'), $value('traderPostalCode'), $value('traderCity'), $value('traderCompanyType'));
@@ -57,6 +60,7 @@ final readonly class ViesCheck
             postalCodeMatch: $match('traderPostalCodeMatch'),
             cityMatch: $match('traderCityMatch'),
             companyTypeMatch: $match('traderCompanyTypeMatch'),
+            response: $response,
         );
     }
 

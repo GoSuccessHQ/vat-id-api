@@ -14,23 +14,27 @@ use SensitiveParameter;
  * status.
  *
  * The API's error message and code are normalized into the exception message
- * and {@see $errorCode}, while the raw body stays available in
- * {@see $responseBody}.
+ * and {@see $errorCode}, while the raw answer stays available in
+ * {@see $response} (and its body in {@see $responseBody}).
  */
 class ApiException extends RuntimeException implements VatIdException
 {
     /**
-     * @param int         $statusCode   HTTP status code of the response.
-     * @param string      $responseBody Raw response body.
-     * @param string|null $errorCode    The service's code: the first VIES `error` (e.g.
-     *                                  `MS_UNAVAILABLE`) or the eVATR `status` (e.g.
-     *                                  `evatr-0011`).
+     * @param int           $statusCode   HTTP status code of the response.
+     * @param string        $responseBody Raw response body.
+     * @param string|null   $errorCode    The service's code: the first VIES `error` (e.g.
+     *                                    `MS_UNAVAILABLE`) or the eVATR `status` (e.g.
+     *                                    `evatr-0011`).
+     * @param Response|null $response     The error response unchanged (status, headers, body);
+     *                                    always set when the client throws, null only when
+     *                                    the exception is constructed by hand.
      */
     public function __construct(
         string $message,
         public readonly int $statusCode,
         public readonly string $responseBody = '',
         public readonly ?string $errorCode = null,
+        public readonly ?Response $response = null,
     ) {
         parent::__construct($message, $statusCode);
     }
@@ -68,7 +72,7 @@ class ApiException extends RuntimeException implements VatIdException
             $message .= " ({$details->errorCode})";
         }
 
-        $arguments = [$message, $status, $body, $details->errorCode];
+        $arguments = [$message, $status, $body, $details->errorCode, 'response' => $response];
 
         return match (true) {
             $status === 400 => new BadRequestException(...$arguments),

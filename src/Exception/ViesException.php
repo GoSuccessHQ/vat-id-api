@@ -29,6 +29,6 @@ final class ViesException extends ApiException
             $message .= " ({$details->errorCode})";
         }
 
-        return new self($message, $response->statusCode, $response->body, $details->errorCode);
+        return new self($message, $response->statusCode, $response->body, $details->errorCode, $response);
     }
 }

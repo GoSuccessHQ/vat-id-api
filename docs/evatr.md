@@ -22,6 +22,15 @@ with HTTP 400, 403, 404, 500 or 503. Every such answer becomes a `Confirmation`
 with the HTTP status; only an answer without a status is an error. Network
 failures and 5xx are retried first.
 
+`Confirmation::$response` holds the answer unchanged, as the record that proves
+the request: `statusCode`, `body` (the JSON exactly as received, after the
+transfer's content encoding is undone), `headers` (names lower-cased, a repeated
+header joined with `, `) and `reasonPhrase`. After retries it is the last
+answer. An exception thrown after an answer arrived carries it the same way:
+`ApiException::$response` and `SerializationException::$response` (null only
+when the request itself could not be encoded). The answer holds no part of the
+request, so not the requester.
+
 `anfrageZeitpunkt` carries nanoseconds and an offset
 (`2026-10-18T17:19:05.064073706+02:00`); they are cut to microseconds, the offset
 is kept. `gueltigAb` and `gueltigBis` are read as dates.

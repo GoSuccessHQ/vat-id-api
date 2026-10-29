@@ -33,8 +33,9 @@ final class RateLimitException extends ApiException
         string $responseBody = '',
         ?string $errorCode = null,
         public readonly ?int $retryAfter = null,
+        ?Response $response = null,
     ) {
-        parent::__construct($message, $statusCode, $responseBody, $errorCode);
+        parent::__construct($message, $statusCode, $responseBody, $errorCode, $response);
     }
 
     /**

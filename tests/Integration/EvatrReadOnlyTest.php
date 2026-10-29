@@ -43,6 +43,10 @@ final class EvatrReadOnlyTest extends TestCase
         self::report('eVATR qualified test call: ' . self::code($confirmation->status) . " (HTTP {$confirmation->httpStatus}), comparisons "
             . implode('', array_map(static fn($comparison): string => $comparison->value ?? '-', [$confirmation->name, $confirmation->street, $confirmation->postalCode, $confirmation->city])));
         self::assertNotSame('', self::code($confirmation->status));
+        self::assertSame($confirmation->httpStatus, $confirmation->response->statusCode);
+        $raw = json_decode($confirmation->response->body, true);
+        self::assertIsArray($raw);
+        self::assertSame(self::code($confirmation->status), $raw['status'] ?? null);
     }
 
     public function testRealRequester(): void

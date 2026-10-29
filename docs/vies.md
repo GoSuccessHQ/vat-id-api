@@ -22,8 +22,12 @@ issues none; the client turns both into `null`. Comparisons are `VALID`,
 `INVALID` or `NOT_PROCESSED`; a missing one counts as not processed. Measured on
 2026-10-18: `DE123456789` without requester → HTTP 200, `valid: false`.
 
+`ViesCheck::$response` holds the answer unchanged (`statusCode`, `body`,
+`headers`, `reasonPhrase`), like eVATR's `Confirmation::$response`.
+
 ## Errors
 
 A body with `actionSucceed: false` raises `ViesException` with the first
 `errorWrappers[].error` as `errorCode`, whatever the HTTP status. Other error
-responses raise the matching `ApiException`.
+responses raise the matching `ApiException`. Both, and a `SerializationException`
+for an unreadable answer, carry the answer in `$response`.
