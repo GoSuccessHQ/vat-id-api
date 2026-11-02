@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1
+
+### Fixed
+
+- The weekly spec-drift check no longer fails when eVATR serves the keys of
+  its specification in another order; the snapshots are written with sorted
+  keys. Nothing changes for code that uses the package.
+
 ## 0.2.0
 
 ### Added
