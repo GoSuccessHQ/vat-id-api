@@ -21,6 +21,26 @@ $sources = [
     'evatr-statusmeldungen.json' => 'https://api.evatr.vies.bzst.de/v1/info/statusmeldungen',
 ];
 
+/**
+ * Objects with their keys sorted, lists in their order: eVATR serves the keys
+ * of its specification in an order that changes from request to request
+ * (observed 2026-11-02), which is no change of the specification.
+ */
+function canonical(mixed $value): mixed
+{
+    if (!is_array($value)) {
+        return $value;
+    }
+
+    $value = array_map(canonical(...), $value);
+
+    if (!array_is_list($value)) {
+        ksort($value, SORT_STRING);
+    }
+
+    return $value;
+}
+
 $http = new CurlHttpClient();
 
 foreach ($sources as $file => $url) {
@@ -43,7 +63,7 @@ foreach ($sources as $file => $url) {
             unset($decoded['info']['version']);
         }
 
-        $body = json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n";
+        $body = json_encode(canonical($decoded), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n";
     }
 
     file_put_contents(__DIR__ . "/../resources/specs/{$file}", $body);
